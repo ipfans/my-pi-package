@@ -123,9 +123,9 @@ parseArgs → 默认 install
 - **remove**：`my-pi-package remove <id|source>`  
 - **doctor**：Node/npm/git/bun、pi、settings、load-order、Compound、auth  
 
-## 5b. skills — marketplace skills
+## 5b. skills — marketplace / plugin skills
 
-将 Claude/Codex 风格 marketplace 仓库里的 **plugin `skills/`** 拷贝到 Pi 可加载路径。
+将 Claude/Codex 风格仓库里的 **skill 目录** 拷贝到 Pi 可加载路径。
 
 | 范围 | 路径 |
 | --- | --- |
@@ -133,20 +133,35 @@ parseArgs → 默认 install
 | `-l` / `--local` | `./.pi/skills` |
 
 ```bash
-my-pi-package skills install ipfans/dev-plugins   # owner/repo → github clone
+my-pi-package skills install ipfans/demo-plugins   # owner/repo → github clone
+my-pi-package skills install mattpocock/skills    # plugin.json 单插件仓库
 my-pi-package skills install ./local/marketplace
 my-pi-package skills remove
 ```
+
+**Manifest 优先级（先找到的生效）：**
+
+1. `.claude-plugin/plugin.json` — 单插件；读取 `skills` 路径列表  
+2. `.claude-plugin/marketplace.json`  
+3. `.agents/plugins/marketplace.json`  
+
+存在有效 `plugin.json` 时**不再**读取 marketplace。
 
 **install 流程：**
 
 1. 解析 source：本地目录 / `owner/repo` → `https://github.com/owner/repo.git` / git URL  
 2. 远程则 `git clone --depth 1` 到临时目录  
-3. 读取 `.claude-plugin/marketplace.json` 或 `.agents/plugins/marketplace.json`  
-4. 解析每个 plugin 的 `source`（字符串路径或 object 的 `path` / 相对 `url`）  
-5. 仅展示含 `skills/` 子目录的插件  
-6. TTY 下 TUI 多选插件（默认全选）；`-y` 需 `--all` 或 `--only plugin1,plugin2`  
-7. 将所选插件 `skills/*` 目录拷贝到目标路径；**已存在则覆盖**
+3. 按优先级加载 manifest  
+4. **plugin.json 模式**  
+   - 解析 `skills[]` 相对路径（如 `./skills/engineering/ask-matt`），校验在仓库根下且为目录  
+   - skill 名为路径 basename（`ask-matt`）；**整夹拷贝**  
+   - TTY 下 TUI **多选 skills**（默认全选）；`-y` 需 `--all` 或 `--only skill1,skill2`  
+5. **marketplace 模式**  
+   - 解析每个 plugin 的 `source`（字符串路径或 object 的 `path` / 相对 `url`）  
+   - 仅展示含 `skills/` 子目录的插件  
+   - TTY 下 TUI **多选插件**（默认全选）；`-y` 需 `--all` 或 `--only plugin1,plugin2`  
+   - 将所选插件 `skills/*` 目录拷贝到目标路径  
+6. 目标路径下 skill 目录**已存在则覆盖**
 
 **remove 流程：**
 

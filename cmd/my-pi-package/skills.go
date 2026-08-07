@@ -111,28 +111,67 @@ func cmdSkillsInstall(f skillsFlags) int {
 	}
 	defer repo.Close()
 
-	m, rel, err := skills.LoadMarketplace(repo.Root)
+	disc, err := skills.Discover(repo.Root)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 2
 	}
-	plugins, err := skills.DiscoverPluginsWithSkills(repo.Root, m)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		return 1
-	}
-	if len(plugins) == 0 {
-		fmt.Fprintln(os.Stderr, "no plugins with a skills/ directory found in marketplace")
+	if len(disc.Plugins) == 0 {
+		fmt.Fprintln(os.Stderr, "no plugins with skills found")
 		return 2
 	}
 
 	fmt.Printf("Source:   %s\n", repo.SourceURL)
-	name := m.Name
-	if name == "" {
-		name = "(unnamed)"
-	}
-	fmt.Printf("Manifest: %s (%s)\n", rel, name)
+	fmt.Printf("Manifest: %s (%s)\n", disc.ManifestRel, disc.Name)
 	fmt.Printf("Target:   %s\n", target)
+
+	switch disc.Mode {
+	case skills.ModePlugin:
+		return installFromPlugin(f, target, disc)
+	default:
+		return installFromMarketplace(f, target, disc)
+	}
+}
+
+func installFromPlugin(f skillsFlags, target string, disc *skills.DiscoverResult) int {
+	p := disc.Plugins[0]
+	names := p.SkillNames()
+	if len(names) == 0 {
+		fmt.Fprintln(os.Stderr, "plugin.json lists no installable skill directories")
+		return 2
+	}
+
+	fmt.Printf("Skills:   %d (plugin.json)\n\n", len(names))
+
+	selected, code := selectSkillsForInstall(f, p)
+	if code != 0 {
+		return code
+	}
+	if selected == nil {
+		return 0 // aborted
+	}
+
+	filtered, err := skills.FilterSkills(p, selected)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+
+	fmt.Println("Installing skills …")
+	res, err := skills.Install(target, []skills.PluginSkills{filtered}, []string{filtered.Name})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+	fmt.Printf("\nInstalled %d, replaced %d, failed %d\n", res.Installed, res.Replaced, res.Failed)
+	if res.Failed > 0 {
+		return 1
+	}
+	return 0
+}
+
+func installFromMarketplace(f skillsFlags, target string, disc *skills.DiscoverResult) int {
+	plugins := disc.Plugins
 	fmt.Printf("Plugins with skills: %d\n\n", len(plugins))
 
 	selected, code := selectPlugins(f, plugins)
@@ -154,6 +193,49 @@ func cmdSkillsInstall(f skillsFlags) int {
 		return 1
 	}
 	return 0
+}
+
+// selectSkillsForInstall: TUI multi-select skills (plugin.json mode).
+// selected == nil && code == 0 means aborted.
+func selectSkillsForInstall(f skillsFlags, p skills.PluginSkills) ([]string, int) {
+	interactive := !f.yes && tui.IsInteractive()
+	if interactive {
+		names := p.SkillNames()
+		items := make([]tui.PickItem, 0, len(names))
+		for _, name := range names {
+			items = append(items, tui.PickItem{
+				ID:    name,
+				Title: name,
+			})
+		}
+		res, err := tui.RunMultiSelect("Select skills to install", items, tui.MultiSelectOpts{
+			DefaultAll:  true,
+			MinSelected: 1,
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "tui: %v\n", err)
+			return nil, 1
+		}
+		if res.Aborted {
+			fmt.Println("Aborted.")
+			return nil, 0
+		}
+		return res.Selected, 0
+	}
+
+	if f.all {
+		return p.SkillNames(), 0
+	}
+	if len(f.only) > 0 {
+		names, err := skills.SelectSkillsByOnly(p, f.only)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return nil, 2
+		}
+		return names, 0
+	}
+	fmt.Fprintln(os.Stderr, "non-interactive install requires --all or --only <skill names>")
+	return nil, 2
 }
 
 func selectPlugins(f skillsFlags, plugins []skills.PluginSkills) ([]string, int) {
@@ -287,23 +369,31 @@ Usage:
 Source for install:
   owner/repo     Clone https://github.com/owner/repo.git (e.g. ipfans/dev-plugins)
   git URL        Any https:// or git@ remote
-  local path     Existing marketplace directory
+  local path     Existing marketplace or plugin directory
+
+Manifest priority (first found wins):
+  .claude-plugin/plugin.json          single-plugin; skills[] paths; TUI picks skills
+  .claude-plugin/marketplace.json     multi-plugin; TUI picks plugins
+  .agents/plugins/marketplace.json
 
 Options:
   -l, --local        Use project .pi/skills instead of ~/.pi/agent/skills
   -y, --yes          Non-interactive (no TUI)
-  --all              With -y on install: install every plugin that has skills/
-  --only <list>      With -y: plugin names (install) or skill names (remove)
+  --all              With -y on install: install every skill (plugin.json) or every plugin
+  --only <list>      With -y: skill names (plugin.json) or plugin names (marketplace); remove: skill names
   -h, --help         Show this help
 
 Interactive (TTY, no -y):
-  install  → multi-select plugins (default: all checked), then copy skills (overwrite)
-  remove   → multi-select installed skills (must pick ≥1), then delete
+  plugin.json  → multi-select skills (default: all checked), then copy whole skill folders
+  marketplace  → multi-select plugins (default: all checked), then copy skills (overwrite)
+  remove       → multi-select installed skills (must pick ≥1), then delete
 
 Examples:
   my-pi-package skills install ipfans/dev-plugins
-  my-pi-package skills install ./path/to/marketplace
-  my-pi-package skills install ipfans/dev-plugins -y --all
+  my-pi-package skills install mattpocock/skills
+  my-pi-package skills install ./path/to/plugin
+  my-pi-package skills install mattpocock/skills -y --all
+  my-pi-package skills install mattpocock/skills -y --only ask-matt,tdd
   my-pi-package skills install ipfans/dev-plugins -y --only dev-flow,codex-goal
   my-pi-package skills remove
   my-pi-package skills remove -y --only ce-plan,ce-work
