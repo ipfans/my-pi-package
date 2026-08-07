@@ -48,6 +48,7 @@ my-pi-package [command] [options]
 | `update` | | 刷新 Compound（若已装）+ `pi update` |
 | `remove` | | 按 id 或 raw source 卸载 |
 | `doctor` | | 环境健康检查 |
+| `skills` | | 从 marketplace 安装 / 删除 Pi agent skills |
 
 **install 选项：**
 
@@ -121,6 +122,39 @@ parseArgs → 默认 install
 - **update**：若含 compound 则强制刷新 CE，再 `pi update`  
 - **remove**：`my-pi-package remove <id|source>`  
 - **doctor**：Node/npm/git/bun、pi、settings、load-order、Compound、auth  
+
+## 5b. skills — marketplace skills
+
+将 Claude/Codex 风格 marketplace 仓库里的 **plugin `skills/`** 拷贝到 Pi 可加载路径。
+
+| 范围 | 路径 |
+| --- | --- |
+| 全局 | `~/.pi/agent/skills`（或 `$PI_CODING_AGENT_DIR/skills`） |
+| `-l` / `--local` | `./.pi/skills` |
+
+```bash
+my-pi-package skills install ipfans/dev-plugins   # owner/repo → github clone
+my-pi-package skills install ./local/marketplace
+my-pi-package skills remove
+```
+
+**install 流程：**
+
+1. 解析 source：本地目录 / `owner/repo` → `https://github.com/owner/repo.git` / git URL  
+2. 远程则 `git clone --depth 1` 到临时目录  
+3. 读取 `.claude-plugin/marketplace.json` 或 `.agents/plugins/marketplace.json`  
+4. 解析每个 plugin 的 `source`（字符串路径或 object 的 `path` / 相对 `url`）  
+5. 仅展示含 `skills/` 子目录的插件  
+6. TTY 下 TUI 多选插件（默认全选）；`-y` 需 `--all` 或 `--only plugin1,plugin2`  
+7. 将所选插件 `skills/*` 目录拷贝到目标路径；**已存在则覆盖**
+
+**remove 流程：**
+
+1. 列出目标目录下已安装的 skill 文件夹  
+2. TTY 下 TUI 多选（默认不选，至少选 1）；`-y` 需 `--only skill1,skill2`  
+3. `RemoveAll` 所选目录  
+
+不依赖 catalog；不记录 provenance。
 
 ## 6. 开发与发布
 

@@ -28,6 +28,8 @@ my-pi-package doctor
 | `update` | Refresh Compound (if present) + `pi update` |
 | `remove <id>` | Remove a package |
 | `doctor` | Environment health check |
+| `skills install <source>` | Install agent skills from a marketplace repo |
+| `skills remove` | Remove installed agent skills |
 
 ### Install options
 
@@ -37,6 +39,17 @@ my-pi-package doctor
 -l, --local             # project .pi/settings.json
 -y, --yes               # non-interactive
 --catalog path.yaml     # custom catalog
+```
+
+### Skills (marketplace)
+
+Installs plugin `skills/` folders into `~/.pi/agent/skills` (or `.pi/skills` with `-l`).
+
+```bash
+my-pi-package skills install ipfans/demo-plugin   # clone GitHub, TUI pick plugins
+my-pi-package skills install ipfans/demo-plugin -y --all
+my-pi-package skills remove                       # TUI pick skills to delete
+my-pi-package skills remove -y --only ce-plan
 ```
 
 ## Development

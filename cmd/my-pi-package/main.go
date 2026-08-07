@@ -24,6 +24,11 @@ func main() {
 }
 
 func run(args []string) int {
+	// skills is nested and does not need the catalog
+	if len(args) > 0 && args[0] == "skills" {
+		return runSkills(args[1:])
+	}
+
 	flags, err := parseArgs(args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -209,7 +214,7 @@ func parseArgs(args []string) (cliFlags, error) {
 
 func isCommand(s string) bool {
 	switch s {
-	case "install", "status", "update", "doctor", "remove":
+	case "install", "status", "update", "doctor", "remove", "skills":
 		return true
 	default:
 		return false
@@ -244,6 +249,7 @@ Commands:
   status    Show which catalog packages are installed
   update    Run pi update for installed Pi packages
   doctor    Check your environment for common problems
+  skills    Install or remove agent skills from a marketplace
 
 Install options:
   --only <list>       Install only the given categories or package ids
@@ -266,5 +272,8 @@ Examples:
   my-pi-package --only subagents,mcp
   my-pi-package status
   my-pi-package doctor
+  my-pi-package skills install ipfans/dev-plugins
+  my-pi-package skills remove
+  my-pi-package skills --help
 `, version, commit, date)
 }

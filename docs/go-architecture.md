@@ -26,9 +26,11 @@ my-pi-package/
 ├── settings/
 ├── pi/
 ├── install/
-├── tui/
+├── skills/                  # marketplace skills install / remove
+├── tui/                     # catalog picker + generic multi-select
 └── cmd/my-pi-package/
-    └── main.go
+    ├── main.go
+    └── skills.go            # skills subcommand wiring
 ```
 
 `main` 只做接线；业务在 domain 包中。
