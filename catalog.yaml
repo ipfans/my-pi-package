@@ -197,13 +197,13 @@ packages:
     description: Interactive shell overlays
     hint: Run Pi, Codex, editors, SSH, and long-running CLIs in observable overlays.
 
-  - id: powerline-footer
+  - id: statusline
     category: ui
     type: npm
-    package: pi-powerline-footer
+    package: "@narumitw/pi-statusline"
     version: latest
-    description: Powerline footer
-    hint: Powerline-style footer status for the Pi TUI.
+    description: Information-rich statusline footer
+    hint: Replaces the footer with model, git, context, and time — zero-config powerline UI.
 
   # --- research ---
   - id: autoresearch
@@ -233,6 +233,14 @@ packages:
     version: latest
     description: Dynamic workflows
     hint: Define and run dynamic multi-step workflows inside Pi.
+
+  - id: ponytail
+    category: frameworks
+    type: npm
+    package: "@dietrichgebert/ponytail"
+    version: latest
+    description: Lazy senior dev mode
+    hint: Prefer the smallest correct solution — less code, lower cost, faster agents.
 
   # --- themes ---
   - id: curated-themes
