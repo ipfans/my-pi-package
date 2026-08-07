@@ -1,0 +1,269 @@
+# Plugin catalog for my-pi-package — single source of truth.
+# version: "latest" tracks newest; pin with semver or git commit/tag.
+# See docs/catalog-yaml.md
+
+defaults:
+  version: latest
+
+pi:
+  package: "@earendil-works/pi-coding-agent"
+  version: latest
+
+categories:
+  - core
+  - ui
+  - research
+  - frameworks
+  - themes
+  - providers
+
+load_first:
+  - extension-settings
+
+packages:
+  # --- core ---
+  - id: extension-settings
+    category: ui
+    type: npm
+    package: "@juanibiapina/pi-extension-settings"
+    version: latest
+    description: Settings support for powerbar
+    hint: Required by powerbar for its settings panel.
+
+  - id: subagents
+    category: core
+    type: npm
+    package: pi-subagents
+    version: latest
+    description: Sub-agent execution
+    hint: Run isolated sub-agents for parallel work.
+
+  - id: pi-ask-user
+    category: core
+    type: npm
+    package: pi-ask-user
+    version: latest
+    description: Ask-user prompts
+    hint: Interactive user questions for agent workflows.
+
+  - id: mcp
+    category: core
+    type: npm
+    package: pi-mcp-adapter
+    version: latest
+    description: MCP server integration
+    hint: Connect Pi to any MCP-compatible tool server.
+
+  - id: web-access
+    category: core
+    type: npm
+    package: pi-web-access
+    version: latest
+    description: Web search and page fetch
+    hint: Built-in web search and URL fetching.
+
+  - id: memory
+    category: core
+    type: npm
+    package: pi-memory-md
+    version: latest
+    legacy_sources:
+      - git:github.com/VandeeFeng/pi-memory-md
+    description: Markdown-backed memory
+    hint: Persistent memory stored as Markdown files.
+
+  - id: plan
+    category: core
+    type: npm
+    package: "@devkade/pi-plan"
+    version: latest
+    description: /plan command
+    hint: Read-only planning mode with approval-based execution.
+
+  - id: simplify
+    category: core
+    type: npm
+    package: pi-simplify
+    version: latest
+    description: Code simplify review
+    hint: Reviews recently changed code for clarity, consistency, and maintainability.
+
+  - id: add-dir
+    category: core
+    type: npm
+    package: pi-add-dir
+    version: latest
+    description: Add external directories
+    hint: Load configs and skills from additional project directories in the same Pi session.
+
+  - id: prompt-templates
+    category: core
+    type: npm
+    package: pi-prompt-template-model
+    version: latest
+    description: Prompt template model switching
+    hint: Add model, skill, and thinking frontmatter so prompt templates switch modes automatically.
+
+  - id: claude-cli
+    category: core
+    type: npm
+    package: pi-claude-cli
+    version: latest
+    description: Claude Code CLI provider
+    hint: Use Claude Code CLI auth as a Pi model provider.
+
+  - id: cache-optimizer
+    category: core
+    type: npm
+    package: pi-cache-optimizer
+    version: latest
+    description: Cache optimizer
+    hint: Optimize prompt/cache usage for lower latency and cost.
+
+  - id: goal
+    category: core
+    type: npm
+    package: "@narumitw/pi-goal"
+    version: latest
+    description: Goal tracking
+    hint: Track and drive agent work against explicit goals.
+
+  # --- ui ---
+  - id: plannotator
+    category: ui
+    type: npm
+    package: "@plannotator/pi-extension"
+    version: latest
+    description: Planning and annotation workflow
+    hint: Plan + annotate large changes interactively.
+
+  - id: slopchop
+    category: ui
+    type: npm
+    package: pi-slopchop
+    version: latest
+    description: Diff review and annotation
+    hint: Review diffs inside Pi and turn FIX/DISCUSS annotations into the next prompt.
+
+  - id: powerbar
+    category: ui
+    type: npm
+    package: "@juanibiapina/pi-powerbar"
+    version: latest
+    depends_on:
+      - extension-settings
+    description: Powerbar UI
+    hint: Status line for Pi with live context.
+
+  - id: usage
+    category: ui
+    type: npm
+    package: "@tmustier/pi-usage-extension"
+    version: latest
+    description: Usage and cost dashboard
+    hint: Track token usage and API cost in-session.
+
+  - id: raw-paste
+    category: ui
+    type: npm
+    package: "@tmustier/pi-raw-paste"
+    version: latest
+    description: Raw paste command
+    hint: Paste raw clipboard content without Pi re-interpreting it.
+
+  - id: todos
+    category: ui
+    type: npm
+    package: "@tintinweb/pi-tasks"
+    version: latest
+    legacy_sources:
+      - git:github.com/tintinweb/pi-manage-todo-list@b75c449aa85ce328e9a8b632f62bf642aed40359
+    description: Todo list management
+    hint: Track multi-step work with live progress widget and session persistence.
+
+  - id: btw
+    category: ui
+    type: npm
+    package: pi-btw
+    version: latest
+    description: Side-chat popover
+    hint: Ask quick questions without polluting your conversation history.
+
+  - id: interactive-shell
+    category: ui
+    type: npm
+    package: pi-interactive-shell
+    version: latest
+    description: Interactive shell overlays
+    hint: Run Pi, Codex, editors, SSH, and long-running CLIs in observable overlays.
+
+  - id: powerline-footer
+    category: ui
+    type: npm
+    package: pi-powerline-footer
+    version: latest
+    description: Powerline footer
+    hint: Powerline-style footer status for the Pi TUI.
+
+  # --- research ---
+  - id: autoresearch
+    category: research
+    type: npm
+    package: pi-autoresearch
+    version: latest
+    legacy_sources:
+      - git:github.com/davebcn87/pi-autoresearch
+      - git:github.com/davebcn87/pi-autoresearch@5a29db080131449edc6d25a6b351b12879063366
+    description: Autonomous experiment loop
+    hint: Long-running autonomous research loop.
+
+  - id: ralph-wiggum
+    category: research
+    type: npm
+    package: "@tmustier/pi-ralph-wiggum"
+    version: latest
+    description: Ralph Wiggum agent loop
+    hint: Long-running iterative dev loops with goals, checklists, and optional self-reflection.
+
+  # --- frameworks ---
+  - id: dynamic-workflows
+    category: frameworks
+    type: npm
+    package: "@quintinshaw/pi-dynamic-workflows"
+    version: latest
+    description: Dynamic workflows
+    hint: Define and run dynamic multi-step workflows inside Pi.
+
+  # --- themes ---
+  - id: curated-themes
+    category: themes
+    type: npm
+    package: "@victor-software-house/pi-curated-themes"
+    version: latest
+    description: 65 curated dark themes
+    hint: 65 dark terminal themes adapted from iTerm2-Color-Schemes.
+
+  - id: terminal-theme
+    category: themes
+    type: npm
+    package: pi-terminal-theme
+    version: latest
+    description: Terminal ANSI theme
+    hint: Maps Pi colors to ANSI 0–15 so Pi inherits your terminal's own color palette.
+
+  # --- providers ---
+  - id: xai-oauth
+    category: providers
+    type: npm
+    package: pi-xai-oauth
+    version: latest
+    description: xAI OAuth provider
+    hint: Authenticate and use xAI models via OAuth inside Pi.
+
+  - id: cliproxyapi-provider
+    category: providers
+    type: npm
+    package: "@router-for-me/pi-cliproxyapi-provider"
+    version: latest
+    description: CLI Proxy API provider
+    hint: Route Pi model calls through CLI Proxy API.

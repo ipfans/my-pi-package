@@ -1,0 +1,94 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+
+vars:
+  APP: my-pi-package
+  MODULE: github.com/ipfans/my-pi-package
+  BIN_DIR: bin
+  BINARY: "{{.BIN_DIR}}/{{.APP}}"
+  MAIN_PKG: ./cmd/my-pi-package
+  VERSION:
+    sh: git describe --tags --always --dirty 2>/dev/null || echo dev
+  COMMIT:
+    sh: git rev-parse --short HEAD 2>/dev/null || echo none
+  DATE:
+    sh: date -u +%Y-%m-%dT%H:%M:%SZ
+  LDFLAGS: >-
+    -s -w
+    -X main.version={{.VERSION}}
+    -X main.commit={{.COMMIT}}
+    -X main.date={{.DATE}}
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  tidy:
+    desc: go mod tidy
+    cmds:
+      - go mod tidy
+
+  fmt:
+    desc: Format Go sources
+    cmds:
+      - gofmt -w .
+
+  vet:
+    desc: go vet
+    cmds:
+      - go vet ./...
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - go test ./...
+
+  test:race:
+    desc: Run tests with race detector
+    cmds:
+      - go test -race ./...
+
+  build:
+    desc: Build binary to ./bin/my-pi-package
+    cmds:
+      - mkdir -p {{.BIN_DIR}}
+      - go build -ldflags '{{.LDFLAGS}}' -o {{.BINARY}} {{.MAIN_PKG}}
+    generates:
+      - "{{.BINARY}}"
+
+  install:
+    desc: Install binary to GOPATH/bin (or GOBIN)
+    cmds:
+      - go install -ldflags '{{.LDFLAGS}}' {{.MAIN_PKG}}
+
+  run:
+    desc: "Build and run (pass args after --, e.g. task run -- status)"
+    deps: [build]
+    cmds:
+      - "{{.BINARY}} {{.CLI_ARGS}}"
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -rf {{.BIN_DIR}} dist
+
+  check:
+    desc: fmt check + vet + test
+    cmds:
+      - test -z "$(gofmt -l .)" || (echo 'gofmt needed:' && gofmt -l . && exit 1)
+      - task: vet
+      - task: test
+
+  release:snapshot:
+    desc: Local GoReleaser snapshot build (no publish)
+    cmds:
+      - goreleaser release --snapshot --clean --skip=publish
+
+  release:check:
+    desc: Validate .goreleaser.yaml
+    cmds:
+      - goreleaser check
