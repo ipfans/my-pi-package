@@ -226,14 +226,6 @@ packages:
     hint: Long-running iterative dev loops with goals, checklists, and optional self-reflection.
 
   # --- frameworks ---
-  - id: dynamic-workflows
-    category: frameworks
-    type: npm
-    package: "@quintinshaw/pi-dynamic-workflows"
-    version: latest
-    description: Dynamic workflows
-    hint: Define and run dynamic multi-step workflows inside Pi.
-
   - id: ponytail
     category: frameworks
     type: npm
