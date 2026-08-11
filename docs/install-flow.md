@@ -141,26 +141,33 @@ my-pi-package skills remove
 
 **Manifest 优先级（先找到的生效）：**
 
-1. `.claude-plugin/plugin.json` — 单插件；读取 `skills` 路径列表  
-2. `.claude-plugin/marketplace.json`  
-3. `.agents/plugins/marketplace.json`  
+1. `.claude-plugin/marketplace.json`  
+2. `.agents/plugins/marketplace.json`  
+3. 否则单插件发现：`.claude-plugin/plugin.json`（可选）+ 默认布局  
 
-存在有效 `plugin.json` 时**不再**读取 marketplace。
+对齐 [Claude Code plugins / marketplaces](https://code.claude.com/docs/en/plugins-reference) 的 skill 语义。
 
 **install 流程：**
 
 1. 解析 source：本地目录 / `owner/repo` → `https://github.com/owner/repo.git` / git URL  
 2. 远程则 `git clone --depth 1` 到临时目录  
 3. 按优先级加载 manifest  
-4. **plugin.json 模式**  
-   - 解析 `skills[]` 相对路径（如 `./skills/engineering/ask-matt`），校验在仓库根下且为目录  
-   - skill 名为路径 basename（`ask-matt`）；**整夹拷贝**  
-   - TTY 下 TUI **多选 skills**（默认全选）；`-y` 需 `--all` 或 `--only skill1,skill2`  
-5. **marketplace 模式**  
+4. **marketplace 模式**  
    - 解析每个 plugin 的 `source`（字符串路径或 object 的 `path` / 相对 `url`）  
-   - 仅展示含 `skills/` 子目录的插件  
+   - skill 发现（Claude）：  
+     - 默认扫描 `\<pluginDir\>/skills/\<name\>/SKILL.md`  
+     - marketplace / plugin.json 的 `skills` 字段（string 或 array）指向 skill 目录或 skill 容器  
+     - `source: "./"`（marketplace 根）时，显式 `skills` 列表为**完整集合**（不并入其它默认路径）；所列路径都不存在时回退默认 `skills/` 扫描  
+     - 非根 `source` 时 `skills` **追加**到默认 `skills/`  
+     - `strict: false`：仅 marketplace 条目定义组件；嵌套 `plugin.json` 若声明了组件字段则报错  
+     - `strict: true`（默认）：嵌套 `plugin.json` 为权威，marketplace 条目合并补充  
+     - 无 `skills/`、无 `skills` 字段、但有根级 `SKILL.md` → 单 skill  
+     - skill 名优先用 `SKILL.md` frontmatter `name`，否则目录 basename  
    - TTY 下 TUI **多选插件**（默认全选）；`-y` 需 `--all` 或 `--only plugin1,plugin2`  
-   - 将所选插件 `skills/*` 目录拷贝到目标路径  
+   - 将所选插件的 skill 目录整夹拷贝到目标路径  
+5. **单插件模式**（无 marketplace）  
+   - 同上 Claude skill 规则（plugin.json 的 `skills` 追加到默认 `skills/`）  
+   - TTY 下 TUI **多选 skills**（默认全选）；`-y` 需 `--all` 或 `--only skill1,skill2`  
 6. 目标路径下 skill 目录**已存在则覆盖**
 
 **remove 流程：**

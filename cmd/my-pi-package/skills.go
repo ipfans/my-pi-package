@@ -372,9 +372,9 @@ Source for install:
   local path     Existing marketplace or plugin directory
 
 Manifest priority (first found wins):
-  .claude-plugin/plugin.json          single-plugin; skills[] paths; TUI picks skills
-  .claude-plugin/marketplace.json     multi-plugin; TUI picks plugins
+  .claude-plugin/marketplace.json     multi-plugin; Claude skills semantics; TUI picks plugins
   .agents/plugins/marketplace.json
+  else single-plugin (plugin.json + skills/ + root SKILL.md); TUI picks skills
 
 Options:
   -l, --local        Use project .pi/skills instead of ~/.pi/agent/skills

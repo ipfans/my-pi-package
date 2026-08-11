@@ -84,30 +84,14 @@ func TestDiscoverPluginJSON(t *testing.T) {
 	}
 }
 
-func TestDiscoverPluginJSONTakesPriorityOverMarketplace(t *testing.T) {
+func TestDiscoverPluginJSONWithoutMarketplace(t *testing.T) {
+	// Pure plugin repo (no marketplace.json) still uses plugin.json + skills paths.
 	root := t.TempDir()
 	makeSkillTree(t, root, "skills/from-plugin/alpha", map[string]string{"SKILL.md": "p\n"})
 	writePluginJSON(t, root, `{
   "name": "from-plugin",
   "skills": ["./skills/from-plugin/alpha"]
 }`)
-
-	// marketplace that would yield different skills if used
-	pluginDir := filepath.Join(root, "plugins", "demo")
-	skill := filepath.Join(pluginDir, "skills", "market-skill")
-	if err := os.MkdirAll(skill, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("m\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	manifest := `{
-  "name": "test-market",
-  "plugins": [{"name": "demo", "source": "./plugins/demo"}]
-}`
-	if err := os.WriteFile(filepath.Join(root, ".claude-plugin", "marketplace.json"), []byte(manifest), 0o644); err != nil {
-		t.Fatal(err)
-	}
 
 	disc, err := Discover(root)
 	if err != nil {
@@ -119,9 +103,6 @@ func TestDiscoverPluginJSONTakesPriorityOverMarketplace(t *testing.T) {
 	if _, ok := disc.Plugins[0].Skills["alpha"]; !ok {
 		t.Fatalf("expected plugin skill, got %+v", disc.Plugins[0].Skills)
 	}
-	if _, ok := disc.Plugins[0].Skills["market-skill"]; ok {
-		t.Fatal("must not load marketplace skills when plugin.json exists")
-	}
 }
 
 func TestDiscoverFallsBackToMarketplace(t *testing.T) {
@@ -129,6 +110,9 @@ func TestDiscoverFallsBackToMarketplace(t *testing.T) {
 	pluginDir := filepath.Join(root, "plugins", "demo")
 	skill := filepath.Join(pluginDir, "skills", "s1")
 	if err := os.MkdirAll(skill, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("# s1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	mPath := filepath.Join(root, ".claude-plugin")
@@ -180,7 +164,7 @@ func TestPluginManifestErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("duplicate basename", func(t *testing.T) {
+	t.Run("duplicate basename last wins", func(t *testing.T) {
 		root := t.TempDir()
 		makeSkillTree(t, root, "skills/a/same", map[string]string{"SKILL.md": "1\n"})
 		makeSkillTree(t, root, "skills/b/same", map[string]string{"SKILL.md": "2\n"})
@@ -188,18 +172,29 @@ func TestPluginManifestErrors(t *testing.T) {
   "name": "x",
   "skills": ["./skills/a/same", "./skills/b/same"]
 }`)
-		_, err := Discover(root)
-		if err == nil {
-			t.Fatal("expected duplicate error")
+		disc, err := Discover(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Same skill name: later path wins (Claude merge).
+		if len(disc.Plugins[0].Skills) != 1 {
+			t.Fatalf("skills = %v", disc.Plugins[0].SkillNames())
+		}
+		body, err := os.ReadFile(filepath.Join(disc.Plugins[0].Skills["same"], "SKILL.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(body) != "2\n" {
+			t.Fatalf("body = %q", body)
 		}
 	})
 
-	t.Run("empty skills", func(t *testing.T) {
+	t.Run("empty skills no layout", func(t *testing.T) {
 		root := t.TempDir()
 		writePluginJSON(t, root, `{"name":"x","skills":[]}`)
 		_, err := Discover(root)
 		if err == nil {
-			t.Fatal("expected error")
+			t.Fatal("expected error when no skills/ and no root SKILL.md")
 		}
 	})
 

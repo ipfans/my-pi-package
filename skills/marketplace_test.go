@@ -66,6 +66,9 @@ func TestLoadAndDiscover(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(skillA, "SKILL.md"), []byte("# a\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(skillB, "SKILL.md"), []byte("# b\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	// plugin without skills
 	noSkills := filepath.Join(root, "plugins", "empty")
 	if err := os.MkdirAll(noSkills, 0o755); err != nil {
@@ -120,6 +123,9 @@ func TestLoadAgentsMarketplace(t *testing.T) {
 	pluginDir := filepath.Join(root, "plugins", "p1")
 	skill := filepath.Join(pluginDir, "skills", "s1")
 	if err := os.MkdirAll(skill, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("# s1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	manifest := `{

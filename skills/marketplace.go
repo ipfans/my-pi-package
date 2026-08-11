@@ -21,6 +21,18 @@ type Plugin struct {
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
 	Source      json.RawMessage `json:"source"`
+	// Skills is the Claude component path field (string or array of relative paths).
+	Skills PathList `json:"skills"`
+	// Strict controls whether nested plugin.json is the component authority.
+	// nil / omitted → true (Claude default).
+	Strict *bool `json:"strict"`
+}
+
+func (p Plugin) strictMode() bool {
+	if p.Strict == nil {
+		return true
+	}
+	return *p.Strict
 }
 
 // PluginSkills is a plugin that has one or more skill directories.
@@ -75,8 +87,8 @@ func LoadMarketplace(root string) (*Marketplace, string, error) {
 		root, strings.Join(marketplaceRelPaths, ", "))
 }
 
-// DiscoverPluginsWithSkills resolves each plugin source and lists skill directories.
-// Plugins without a skills/ directory are omitted.
+// DiscoverPluginsWithSkills resolves each plugin using Claude marketplace semantics.
+// Plugins that resolve to zero skills are omitted.
 func DiscoverPluginsWithSkills(root string, m *Marketplace) ([]PluginSkills, error) {
 	root, err := filepath.Abs(root)
 	if err != nil {
@@ -95,18 +107,18 @@ func DiscoverPluginsWithSkills(root string, m *Marketplace) ([]PluginSkills, err
 		if err != nil {
 			return nil, fmt.Errorf("plugin %q: %w", p.Name, err)
 		}
-		skillsDir := filepath.Join(pluginDir, "skills")
-		st, err := os.Stat(skillsDir)
+		st, err := os.Stat(pluginDir)
 		if err != nil {
 			if os.IsNotExist(err) {
-				continue
+				return nil, fmt.Errorf("plugin %q: source %q not found", p.Name, rel)
 			}
-			return nil, fmt.Errorf("plugin %q: stat skills: %w", p.Name, err)
+			return nil, fmt.Errorf("plugin %q: %w", p.Name, err)
 		}
 		if !st.IsDir() {
-			continue
+			return nil, fmt.Errorf("plugin %q: source %q is not a directory", p.Name, rel)
 		}
-		skills, err := listSkillDirs(skillsDir)
+
+		skills, err := resolveMarketplacePluginSkills(pluginDir, p)
 		if err != nil {
 			return nil, fmt.Errorf("plugin %q: %w", p.Name, err)
 		}
@@ -120,6 +132,68 @@ func DiscoverPluginsWithSkills(root string, m *Marketplace) ([]PluginSkills, err
 		})
 	}
 	return out, nil
+}
+
+// resolveMarketplacePluginSkills applies strict mode + Claude skill path rules.
+func resolveMarketplacePluginSkills(pluginDir string, p Plugin) (map[string]string, error) {
+	srcRel, err := resolvePluginSource(p.Source)
+	if err != nil {
+		return nil, err
+	}
+	marketRoot := srcRel == "."
+
+	nested, nestedOK, err := tryLoadPluginManifest(pluginDir)
+	if err != nil {
+		return nil, err
+	}
+
+	if !p.strictMode() {
+		// Marketplace entry is the entire definition.
+		if nestedOK && componentFieldsDeclared(nested) {
+			return nil, fmt.Errorf("strict:false but plugin.json declares component fields (skills/commands/agents/hooks/mcpServers/outputStyles)")
+		}
+		return resolveSkills(pluginDir, skillResolutionOptions{
+			SkillsField:     p.Skills,
+			MarketplaceRoot: marketRoot,
+			DefaultName:     p.Name,
+		})
+	}
+
+	// strict:true (default): plugin.json is authority when present; marketplace supplements.
+	// Marketplace-root exclusive listing applies only to the marketplace side of the merge.
+	var fromPlugin map[string]string
+	if nestedOK {
+		fromPlugin, err = resolveSkills(pluginDir, skillResolutionOptions{
+			SkillsField:     nested.Skills,
+			MarketplaceRoot: false,
+			DefaultName:     firstNonEmpty(nested.Name, p.Name),
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	fromMarket, err := resolveSkills(pluginDir, skillResolutionOptions{
+		SkillsField:     p.Skills,
+		MarketplaceRoot: marketRoot,
+		DefaultName:     p.Name,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if nestedOK {
+		return mergeSkills(fromPlugin, fromMarket), nil
+	}
+	return fromMarket, nil
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // resolvePluginSource turns marketplace "source" (string or object) into a relative path.
@@ -210,21 +284,7 @@ func safeJoin(root, rel string) (string, error) {
 	return absJoined, nil
 }
 
+// listSkillDirs is kept for tests/backward helpers: children with SKILL.md only.
 func listSkillDirs(skillsDir string) (map[string]string, error) {
-	entries, err := os.ReadDir(skillsDir)
-	if err != nil {
-		return nil, fmt.Errorf("reading skills dir: %w", err)
-	}
-	out := make(map[string]string)
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		if strings.HasPrefix(name, ".") {
-			continue
-		}
-		out[name] = filepath.Join(skillsDir, name)
-	}
-	return out, nil
+	return scanSkillsContainer(skillsDir)
 }

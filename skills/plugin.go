@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Manifest modes returned by Discover.
@@ -17,7 +18,13 @@ const (
 type PluginManifest struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
-	Skills      []string `json:"skills"` // relative dirs, e.g. "./skills/engineering/ask-matt"
+	Skills      PathList `json:"skills"` // string or []string relative paths
+	// Optional component fields — only used for strict:false conflict detection.
+	Commands     PathList        `json:"commands"`
+	Agents       PathList        `json:"agents"`
+	Hooks        json.RawMessage `json:"hooks"`
+	MCPServers   json.RawMessage `json:"mcpServers"`
+	OutputStyles PathList        `json:"outputStyles"`
 }
 
 // DiscoverResult is the unified discovery output for install wiring.
@@ -32,110 +39,156 @@ type DiscoverResult struct {
 
 const pluginManifestRel = ".claude-plugin/plugin.json"
 
-// Discover loads skills from a repo root.
-// Priority: .claude-plugin/plugin.json, then marketplace.json paths.
+// Discover loads skills from a repo root using Claude Code semantics.
+//
+// Priority:
+//  1. marketplace.json (Claude distribution unit) when present
+//  2. otherwise single-plugin discovery (plugin.json and/or default layout)
 func Discover(root string) (*DiscoverResult, error) {
 	root, err := filepath.Abs(root)
 	if err != nil {
 		return nil, fmt.Errorf("resolving root: %w", err)
 	}
 
-	if pm, rel, err := loadPluginManifest(root); err == nil {
-		ps, err := pluginSkillsFromManifest(root, pm)
+	if m, rel, err := LoadMarketplace(root); err == nil {
+		plugins, err := DiscoverPluginsWithSkills(root, m)
 		if err != nil {
 			return nil, err
 		}
-		name := pm.Name
+		name := m.Name
 		if name == "" {
 			name = "(unnamed)"
 		}
 		return &DiscoverResult{
-			Mode:        ModePlugin,
+			Mode:        ModeMarketplace,
 			ManifestRel: rel,
 			Name:        name,
-			Plugins:     []PluginSkills{ps},
+			Plugins:     plugins,
 		}, nil
-	} else if !os.IsNotExist(err) {
-		// parse / validation errors from an existing plugin.json should surface
+	} else if !isNoMarketplace(err) {
 		return nil, err
 	}
 
-	m, rel, err := LoadMarketplace(root)
+	ps, name, rel, err := discoverSinglePlugin(root)
 	if err != nil {
 		return nil, err
-	}
-	plugins, err := DiscoverPluginsWithSkills(root, m)
-	if err != nil {
-		return nil, err
-	}
-	name := m.Name
-	if name == "" {
-		name = "(unnamed)"
 	}
 	return &DiscoverResult{
-		Mode:        ModeMarketplace,
+		Mode:        ModePlugin,
 		ManifestRel: rel,
 		Name:        name,
-		Plugins:     plugins,
+		Plugins:     []PluginSkills{ps},
 	}, nil
 }
 
-// loadPluginManifest reads .claude-plugin/plugin.json.
-// Returns os.ErrNotExist when the file is absent so Discover can fall through.
-func loadPluginManifest(root string) (*PluginManifest, string, error) {
+func isNoMarketplace(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "no marketplace.json found")
+}
+
+// discoverSinglePlugin resolves a plugin root (with optional plugin.json).
+func discoverSinglePlugin(root string) (PluginSkills, string, string, error) {
+	pm, ok, err := tryLoadPluginManifest(root)
+	if err != nil {
+		return PluginSkills{}, "", "", err
+	}
+	var skillsField PathList
+	pluginName := filepath.Base(root)
+	desc := ""
+	manifestLabel := "(auto)"
+	if ok && pm != nil {
+		skillsField = pm.Skills
+		if pm.Name != "" {
+			pluginName = pm.Name
+		}
+		desc = pm.Description
+		manifestLabel = pluginManifestRel
+	}
+
+	skills, err := resolveSkills(root, skillResolutionOptions{
+		SkillsField:     skillsField,
+		MarketplaceRoot: false,
+		DefaultName:     pluginName,
+	})
+	if err != nil {
+		return PluginSkills{}, "", "", err
+	}
+	if len(skills) == 0 {
+		return PluginSkills{}, "", "", fmt.Errorf("no installable skills found under %s", root)
+	}
+	return PluginSkills{
+		Name:        pluginName,
+		Description: desc,
+		Skills:      skills,
+	}, pluginName, manifestLabel, nil
+}
+
+// tryLoadPluginManifest reads .claude-plugin/plugin.json when present.
+// ok is false when the file is absent (not an error).
+func tryLoadPluginManifest(root string) (*PluginManifest, bool, error) {
 	path := filepath.Join(root, filepath.FromSlash(pluginManifestRel))
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, "", err
+			return nil, false, nil
 		}
-		return nil, "", fmt.Errorf("reading %s: %w", path, err)
+		return nil, false, fmt.Errorf("reading %s: %w", path, err)
 	}
 	var pm PluginManifest
 	if err := json.Unmarshal(data, &pm); err != nil {
-		return nil, "", fmt.Errorf("parsing %s: %w", path, err)
+		return nil, false, fmt.Errorf("parsing %s: %w", path, err)
 	}
-	if len(pm.Skills) == 0 {
-		return nil, "", fmt.Errorf("%s: no skills listed", path)
-	}
-	return &pm, pluginManifestRel, nil
+	return &pm, true, nil
 }
 
-// pluginSkillsFromManifest resolves each skills[] path under root into PluginSkills.
-func pluginSkillsFromManifest(root string, pm *PluginManifest) (PluginSkills, error) {
-	skills := make(map[string]string, len(pm.Skills))
-	for i, raw := range pm.Skills {
-		rel, err := cleanRel(raw)
-		if err != nil {
-			return PluginSkills{}, fmt.Errorf("skills[%d] %q: %w", i, raw, err)
-		}
-		dir, err := safeJoin(root, rel)
-		if err != nil {
-			return PluginSkills{}, fmt.Errorf("skills[%d] %q: %w", i, raw, err)
-		}
-		st, err := os.Stat(dir)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return PluginSkills{}, fmt.Errorf("skills[%d] %q: directory not found", i, raw)
-			}
-			return PluginSkills{}, fmt.Errorf("skills[%d] %q: %w", i, raw, err)
-		}
-		if !st.IsDir() {
-			return PluginSkills{}, fmt.Errorf("skills[%d] %q: not a directory", i, raw)
-		}
-		name := filepath.Base(dir)
-		if name == "" || name == "." || name == string(os.PathSeparator) {
-			return PluginSkills{}, fmt.Errorf("skills[%d] %q: empty skill name", i, raw)
-		}
-		if prev, ok := skills[name]; ok {
-			return PluginSkills{}, fmt.Errorf("skills[%d] %q: duplicate skill name %q (also %s)",
-				i, raw, name, prev)
-		}
-		skills[name] = dir
+// loadPluginManifest reads plugin.json requiring a non-empty skills field.
+// Kept for tests that assert explicit path validation; prefer tryLoad + resolveSkills.
+func loadPluginManifest(root string) (*PluginManifest, string, error) {
+	pm, ok, err := tryLoadPluginManifest(root)
+	if err != nil {
+		return nil, "", err
 	}
+	if !ok {
+		return nil, "", os.ErrNotExist
+	}
+	if len(pm.Skills) == 0 {
+		return nil, "", fmt.Errorf("%s: no skills listed", filepath.Join(root, pluginManifestRel))
+	}
+	return pm, pluginManifestRel, nil
+}
+
+// pluginSkillsFromManifest resolves skills[] paths under root into PluginSkills.
+// Used by tests and as a thin wrapper around resolveSkills for explicit path lists.
+func pluginSkillsFromManifest(root string, pm *PluginManifest) (PluginSkills, error) {
+	if pm == nil {
+		return PluginSkills{}, fmt.Errorf("nil plugin manifest")
+	}
+	// Explicit path list without default skills/ merge when only validating listed paths:
+	// Claude additive rules still apply (skills/ + field). For pure path validation
+	// of the listed entries (legacy tests), expand field paths and require them.
 	pluginName := pm.Name
 	if pluginName == "" {
 		pluginName = "plugin"
+	}
+	skills, err := resolveSkills(root, skillResolutionOptions{
+		SkillsField:     pm.Skills,
+		MarketplaceRoot: false,
+		DefaultName:     pluginName,
+	})
+	if err != nil {
+		return PluginSkills{}, err
+	}
+	// If skills field was set, ensure each listed path existed (stricter for plugin.json).
+	if len(pm.Skills) > 0 {
+		_, any, err := expandSkillsField(root, pm.Skills, pluginName)
+		if err != nil {
+			return PluginSkills{}, err
+		}
+		if !any {
+			return PluginSkills{}, fmt.Errorf("skills[0] %q: directory not found", pm.Skills[0])
+		}
+	}
+	if len(skills) == 0 {
+		return PluginSkills{}, fmt.Errorf("no installable skills in plugin %q", pluginName)
 	}
 	return PluginSkills{
 		Name:        pluginName,
@@ -185,4 +238,3 @@ func SelectSkillsByOnly(p PluginSkills, only []string) ([]string, error) {
 	}
 	return filtered.SkillNames(), nil
 }
-
