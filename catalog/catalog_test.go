@@ -15,7 +15,6 @@ func TestLoadEmbedded(t *testing.T) {
 	for _, id := range []string{
 		"extension-settings",
 		"subagents",
-		"dynamic-workflows",
 		"goal",
 		"cache-optimizer",
 		"xai-oauth",
@@ -57,11 +56,6 @@ func TestSourceResolution(t *testing.T) {
 			name: "git pinned",
 			pkg:  Package{Type: TypeGit, Repo: "github.com/tintinweb/pi-manage-todo-list", Version: "b75c449aa85ce328e9a8b632f62bf642aed40359"},
 			want: "git:github.com/tintinweb/pi-manage-todo-list@b75c449aa85ce328e9a8b632f62bf642aed40359",
-		},
-		{
-			name: "new npm package",
-			pkg:  Package{Type: TypeNPM, Package: "@quintinshaw/pi-dynamic-workflows", Version: VersionLatest},
-			want: "npm:@quintinshaw/pi-dynamic-workflows",
 		},
 	}
 	for _, tt := range tests {
@@ -149,7 +143,6 @@ func TestCatalogMatchesUserPackages(t *testing.T) {
 		"npm:@tmustier/pi-ralph-wiggum",
 		"npm:@victor-software-house/pi-curated-themes",
 		"npm:pi-terminal-theme",
-		"npm:@quintinshaw/pi-dynamic-workflows",
 		"npm:@dietrichgebert/ponytail",
 		"npm:@narumitw/pi-goal",
 		"npm:pi-cache-optimizer",
