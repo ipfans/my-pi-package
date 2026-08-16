@@ -360,7 +360,7 @@ func plural(n int) string {
 }
 
 func printSkillsHelp() {
-	fmt.Printf(`my-pi-package skills — install or remove Pi agent skills from marketplaces
+	fmt.Printf(`my-pi-package skills — install or remove agent skills from marketplaces
 
 Usage:
   my-pi-package skills install <source> [options]
@@ -377,7 +377,7 @@ Manifest priority (first found wins):
   else single-plugin (plugin.json + skills/ + root SKILL.md); TUI picks skills
 
 Options:
-  -l, --local        Use project .pi/skills instead of ~/.pi/agent/skills
+  -l, --local        Use project .agents/skills instead of ~/.pi/agent/skills
   -y, --yes          Non-interactive (no TUI)
   --all              With -y on install: install every skill (plugin.json) or every plugin
   --only <list>      With -y: skill names (plugin.json) or plugin names (marketplace); remove: skill names

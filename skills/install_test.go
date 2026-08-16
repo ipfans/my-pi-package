@@ -100,7 +100,7 @@ func TestDirPaths(t *testing.T) {
 		t.Fatalf("global = %q want %q", global, wantGlobal)
 	}
 	local := Dir(settings.Paths{Local: true, Cwd: cwd})
-	wantLocal := filepath.Join(cwd, ".pi", "skills")
+	wantLocal := filepath.Join(cwd, ".agents", "skills")
 	if local != wantLocal {
 		t.Fatalf("local = %q want %q", local, wantLocal)
 	}

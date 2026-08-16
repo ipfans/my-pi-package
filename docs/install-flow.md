@@ -125,12 +125,12 @@ parseArgs → 默认 install
 
 ## 5b. skills — marketplace / plugin skills
 
-将 Claude/Codex 风格仓库里的 **skill 目录** 拷贝到 Pi 可加载路径。
+将 Claude/Codex 风格仓库里的 **skill 目录** 拷贝到 agent 可加载路径。
 
 | 范围 | 路径 |
 | --- | --- |
 | 全局 | `~/.pi/agent/skills`（或 `$PI_CODING_AGENT_DIR/skills`） |
-| `-l` / `--local` | `./.pi/skills` |
+| `-l` / `--local` | `./.agents/skills`（项目内多 agent 共享） |
 
 ```bash
 my-pi-package skills install ipfans/demo-plugins   # owner/repo → github clone

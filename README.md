@@ -43,7 +43,7 @@ my-pi-package doctor
 
 ### Skills (marketplace)
 
-Installs Claude-style plugin skills into `~/.pi/agent/skills` (or `.pi/skills` with `-l`), following marketplace/`plugin.json` skill path rules (default `skills/`, explicit `skills` paths, root `SKILL.md`).
+Installs Claude-style plugin skills into `~/.pi/agent/skills` (or `.agents/skills` with `-l` for cross-agent project support), following marketplace/`plugin.json` skill path rules (default `skills/`, explicit `skills` paths, root `SKILL.md`).
 
 ```bash
 my-pi-package skills install ipfans/demo-plugin   # clone GitHub, TUI pick plugins
