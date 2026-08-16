@@ -252,6 +252,14 @@ packages:
     hint: Maps Pi colors to ANSI 0–15 so Pi inherits your terminal's own color palette.
 
   # --- providers ---
+  - id: dsh-minimal
+    category: providers
+    type: npm
+    package: pi-dsh-minimal
+    version: latest
+    description: DeepSeek Harness adapter
+    hint: Optimize DeepSeek V4 Pro and Flash with an anchored first-turn tool surface.
+
   - id: xai-oauth
     category: providers
     type: npm

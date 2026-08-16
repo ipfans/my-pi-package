@@ -16,6 +16,7 @@ func TestLoadEmbedded(t *testing.T) {
 		"extension-settings",
 		"subagents",
 		"goal",
+		"dsh-minimal",
 		"cache-optimizer",
 		"xai-oauth",
 		"cliproxyapi-provider",
@@ -146,6 +147,7 @@ func TestCatalogMatchesUserPackages(t *testing.T) {
 		"npm:@dietrichgebert/ponytail",
 		"npm:@narumitw/pi-goal",
 		"npm:pi-cache-optimizer",
+		"npm:pi-dsh-minimal",
 		"npm:pi-xai-oauth",
 		"npm:@router-for-me/pi-cliproxyapi-provider",
 	}
