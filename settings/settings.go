@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -231,14 +232,7 @@ func NormalizeLoadOrder(path string, cat *catalog.Catalog) (backup string, chang
 		for _, s := range rest {
 			ordered = append(ordered, s.entry)
 		}
-		changed := false
-		for i := range ordered {
-			if ordered[i] != raw[i] {
-				changed = true
-				break
-			}
-		}
-		if !changed {
+		if reflect.DeepEqual(ordered, raw) {
 			return false
 		}
 		doc["packages"] = ordered
