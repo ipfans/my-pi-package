@@ -171,6 +171,14 @@ packages:
     description: Usage and cost dashboard
     hint: Track token usage and API cost in-session.
 
+  - id: pi-context-usage
+    category: ui
+    type: npm
+    package: pi-context-usage
+    version: latest
+    description: Context window usage visualization
+    hint: /context shows a dot-grid of system prompt, tools, and messages; /context details opens a breakdown overlay.
+
   - id: raw-paste
     category: ui
     type: npm

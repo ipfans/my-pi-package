@@ -21,6 +21,7 @@ func TestLoadEmbedded(t *testing.T) {
 		"xai-oauth",
 		"cliproxyapi-provider",
 		"pi-fff",
+		"pi-context-usage",
 	} {
 		if c.ByID(id) == nil {
 			t.Fatalf("missing package %q", id)
@@ -137,6 +138,7 @@ func TestCatalogMatchesUserPackages(t *testing.T) {
 		"npm:pi-slopchop",
 		"npm:@juanibiapina/pi-powerbar",
 		"npm:@tmustier/pi-usage-extension",
+		"npm:pi-context-usage",
 		"npm:@tmustier/pi-raw-paste",
 		"npm:@tintinweb/pi-tasks",
 		"npm:pi-btw",
