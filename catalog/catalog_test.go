@@ -20,6 +20,7 @@ func TestLoadEmbedded(t *testing.T) {
 		"cache-optimizer",
 		"xai-oauth",
 		"cliproxyapi-provider",
+		"pi-fff",
 	} {
 		if c.ByID(id) == nil {
 			t.Fatalf("missing package %q", id)
@@ -125,6 +126,7 @@ func TestCatalogMatchesUserPackages(t *testing.T) {
 		"npm:pi-ask-user",
 		"npm:pi-mcp-adapter",
 		"npm:pi-web-access",
+		"npm:@ff-labs/pi-fff",
 		"npm:pi-memory-md",
 		"npm:@devkade/pi-plan",
 		"npm:pi-simplify",

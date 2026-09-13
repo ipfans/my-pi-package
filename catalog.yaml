@@ -62,6 +62,14 @@ packages:
     description: Web search and page fetch
     hint: Built-in web search and URL fetching.
 
+  - id: pi-fff
+    category: core
+    type: npm
+    package: "@ff-labs/pi-fff"
+    version: latest
+    description: Fast file and content search
+    hint: Replaces find/grep with FFF — fuzzy file search and SIMD-accelerated content search.
+
   - id: memory
     category: core
     type: npm
