@@ -136,6 +136,22 @@ packages:
     description: Goal tracking
     hint: Track and drive agent work against explicit goals.
 
+  - id: chrome
+    category: core
+    type: npm
+    package: pi-chrome
+    version: latest
+    description: Signed-in Chrome control
+    hint: Inspect pages, click, type, and capture screenshots using your existing Chrome profile.
+
+  - id: computer-use
+    category: core
+    type: npm
+    package: "@injaneity/pi-computer-use"
+    version: latest
+    description: Desktop computer use
+    hint: Observe and control desktop apps on macOS, Windows, and Linux.
+
   # --- ui ---
   - id: plannotator
     category: ui
