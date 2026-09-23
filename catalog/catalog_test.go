@@ -24,6 +24,7 @@ func TestLoadEmbedded(t *testing.T) {
 		"pi-context-usage",
 		"chrome",
 		"computer-use",
+		"structured-output",
 	} {
 		if c.ByID(id) == nil {
 			t.Fatalf("missing package %q", id)
@@ -155,6 +156,7 @@ func TestCatalogMatchesUserPackages(t *testing.T) {
 		"npm:pi-chrome",
 		"npm:@injaneity/pi-computer-use",
 		"npm:pi-cache-optimizer",
+		"npm:@ipfans/pi-structured-output",
 		"npm:pi-dsh-minimal",
 		"npm:pi-xai-oauth",
 		"npm:@router-for-me/pi-cliproxyapi-provider",
